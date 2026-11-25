@@ -1,0 +1,25 @@
+[Unit]
+Description=Bot HaxBall Headless
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+# Run Chrome as an unprivileged account. Create /var/lib/bot-haxball and make it
+# writable by this account before enabling the unit.
+User=haxball
+Group=haxball
+WorkingDirectory=/opt/bot-haxball
+ExecStart=/usr/bin/env npm run room
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+Environment=NODE_ENV=production
+
+# Keep the service's runtime data separate from the checkout. The `.env` file
+# in WorkingDirectory is loaded by the npm script and should be mode 600.
+ReadWritePaths=/var/lib/bot-haxball
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -10,9 +10,34 @@ Host para a API Headless oficial com estatísticas auditáveis, times automátic
 
 Se o Chrome não for encontrado, defina `CHROME_PATH` com o executável. Em WSL, o comando procura também o Chrome do Windows e controla o DevTools pelo PowerShell no próprio Windows; por padrão usa uma porta livre e um perfil temporário. `CHROME_PROFILE_DIR`, quando usado, deve ser um caminho Windows exclusivo do bot, como `C:\Users\seu-usuario\AppData\Local\bot-haxball-chrome`. `CHROME_DEBUG_PORT` fixa a porta caso necessário. `CHROME_HEADLESS=true` oculta a janela e exige um token válido para evitar a recaptcha interativa. A automação usa a interface [DevTools do Chrome](https://chromedevtools.github.io/devtools-protocol/) e pode precisar de ajustes após atualizações do navegador. Como alternativa manual, execute `npm run build` e `npm start` em terminais separados e cole `dist/bootstrap.js` no console da página oficial.
 
-O navegador deve ficar aberto. A URL da sala aparece na página oficial; o serviço local não a registra. Para Chrome em VPS, veja o parâmetro de WebRTC na [documentação oficial](https://github.com/haxball/haxball-issues/wiki/Headless-Host). Não desative recursos de segurança do navegador sem entender o ambiente.
+O processo do navegador precisa continuar em execução, pois a API Headless oficial é executada no contexto do navegador. Isso não exige uma janela gráfica: para VPS, use `CHROME_HEADLESS=true`; o Chrome/Chromium será iniciado com `--headless=new`. Nesse modo não há como resolver uma recaptcha pela VPS, portanto forneça um `ROOM_TOKEN` válido antes de iniciar. A URL da sala aparece na página oficial; o serviço local não a registra. Para Chrome em VPS, veja o parâmetro de WebRTC na [documentação oficial](https://github.com/haxball/haxball-issues/wiki/Headless-Host). Não desative recursos de segurança do navegador sem entender o ambiente.
 
 `http://127.0.0.1:8787/health` expõe contagens locais de partidas e estados da outbox, sem tokens nem nomes de jogadores.
+
+## VPS sem interface gráfica
+
+Instale Node.js 22+ e Chrome ou Chromium na VPS. Crie um usuário sem privilégios administrativos para o processo (por exemplo, `haxball`), instale o projeto em um diretório que esse usuário possa ler e escrever, e mantenha o perfil e os dados fora de `/tmp` para sobreviver a reinicializações:
+
+```ini
+# .env (permissão 600, pertencente ao usuário haxball)
+CHROME_HEADLESS=true
+CHROME_PATH=/usr/bin/chromium
+CHROME_PROFILE_DIR=/var/lib/bot-haxball/chrome-profile
+DATA_DIR=/var/lib/bot-haxball/data
+ROOM_TOKEN=token-gerado-em-https://www.haxball.com/headlesstoken
+```
+
+Preencha também os segredos obrigatórios já listados no `.env.example`. Nunca execute o Chrome como `root` e não use `--no-sandbox`: em vez disso, corrija as permissões do usuário de serviço. A porta DevTools e o endpoint de saúde escutam somente em `127.0.0.1`; não os publique na internet.
+
+Para manter a sala ativa após logout e reinicializações, copie [deploy/bot-haxball.service](deploy/bot-haxball.service) para `/etc/systemd/system/bot-haxball.service`, ajuste `User`, `Group`, `WorkingDirectory` e `ExecStart` para a sua instalação e execute:
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now bot-haxball
+sudo journalctl -u bot-haxball -f
+```
+
+O token da sala pode expirar; quando isso ocorrer, gere outro no site oficial, atualize o arquivo de ambiente com permissão restrita e reinicie o serviço. A recaptcha inicial, se solicitada, precisa ser concluída em uma máquina com interface gráfica antes de levar um token válido à VPS.
 
 ## Verificações
 
