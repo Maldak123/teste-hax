@@ -2,7 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import vm from 'node:vm';
-import { CdpPage, injection, launchWindowsChrome } from '../src/launcher/chrome.js';
+import { CdpPage, chromeArgs, injection, launchWindowsChrome } from '../src/launcher/chrome.js';
+
+test('Chrome args enable VPS WebRTC connectivity only when configured', () => {
+  const base = chromeArgs({ port: 9222, profile: '/tmp/profile', headless: true, disableWebRtcLocalIpAnonymization: false });
+  assert.deepEqual(base, [
+    '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=9222', '--user-data-dir=/tmp/profile', '--no-first-run', '--headless=new', 'about:blank'
+  ]);
+  assert.ok(chromeArgs({ port: 9222, profile: '/tmp/profile', headless: false, disableWebRtcLocalIpAnonymization: true }).includes('--disable-features=WebRtcHideLocalIpsWithMdns'));
+  assert.ok(chromeArgs({ port: 9222, profile: '/tmp/profile', headless: false, disableWebRtcLocalIpAnonymization: true, allowPrivateNetworkAccess: true }).includes('--disable-features=WebRtcHideLocalIpsWithMdns,BlockInsecurePrivateNetworkRequests'));
+});
 
 test('Chrome injection waits for HBInit and starts the bot only once', async () => {
   const intervals = new Set();

@@ -21,13 +21,15 @@ Instale Node.js 22+ e Chrome ou Chromium na VPS. Crie um usuário sem privilégi
 ```ini
 # .env (permissão 600, pertencente ao usuário haxball)
 CHROME_HEADLESS=true
+CHROME_DISABLE_WEBRTC_LOCAL_IP_ANONYMIZATION=true
+CHROME_ALLOW_PRIVATE_NETWORK_ACCESS=true
 CHROME_PATH=/usr/bin/chromium
 CHROME_PROFILE_DIR=/var/lib/bot-haxball/chrome-profile
 DATA_DIR=/var/lib/bot-haxball/data
 ROOM_TOKEN=token-gerado-em-https://www.haxball.com/headlesstoken
 ```
 
-Preencha também os segredos obrigatórios já listados no `.env.example`. Nunca execute o Chrome como `root` e não use `--no-sandbox`: em vez disso, corrija as permissões do usuário de serviço. A porta DevTools e o endpoint de saúde escutam somente em `127.0.0.1`; não os publique na internet.
+Preencha também os segredos obrigatórios já listados no `.env.example`. `CHROME_DISABLE_WEBRTC_LOCAL_IP_ANONYMIZATION=true` adiciona a opção exigida pela documentação oficial do HaxBall para hosts em VPS. `CHROME_ALLOW_PRIVATE_NETWORK_ACCESS=true` permite que essa página pública acesse somente a API do bot em loopback; use-o apenas com o perfil isolado e o servidor em `127.0.0.1` fornecidos pelo projeto. Nunca execute o Chrome como `root` e não use `--no-sandbox`: em vez disso, corrija as permissões do usuário de serviço. A porta DevTools e o endpoint de saúde escutam somente em `127.0.0.1`; não os publique na internet.
 
 Para manter a sala ativa após logout e reinicializações, copie [deploy/bot-haxball.service](deploy/bot-haxball.service) para `/etc/systemd/system/bot-haxball.service`, ajuste `User`, `Group`, `WorkingDirectory` e `ExecStart` para a sua instalação e execute:
 

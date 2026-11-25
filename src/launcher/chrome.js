@@ -20,6 +20,19 @@ function profileFor(chrome) {
   return path.join(os.tmpdir(), 'bot-haxball-chrome');
 }
 
+export function chromeArgs({ port, profile, headless = process.env.CHROME_HEADLESS === 'true', disableWebRtcLocalIpAnonymization = process.env.CHROME_DISABLE_WEBRTC_LOCAL_IP_ANONYMIZATION === 'true', allowPrivateNetworkAccess = process.env.CHROME_ALLOW_PRIVATE_NETWORK_ACCESS === 'true' }) {
+  const args = [`--remote-debugging-address=127.0.0.1`, `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, '--no-first-run'];
+  if (headless) args.push('--headless=new');
+  const disabledFeatures = [];
+  // Required by the official Headless Host documentation when the host runs on a VPS.
+  if (disableWebRtcLocalIpAnonymization) disabledFeatures.push('WebRtcHideLocalIpsWithMdns');
+  // Lets the official HaxBall page reach this bot's loopback-only local API.
+  if (allowPrivateNetworkAccess) disabledFeatures.push('BlockInsecurePrivateNetworkRequests');
+  if (disabledFeatures.length) args.push(`--disable-features=${disabledFeatures.join(',')}`);
+  args.push('about:blank');
+  return args;
+}
+
 const powershellString = value => Buffer.from(value, 'utf8').toString('base64');
 
 export async function launchWindowsChrome(bundle, { chrome, port, roomReadyTimeoutMs = 300_000, spawnProcess = spawn } = {}) {
@@ -179,8 +192,7 @@ export async function launchChrome(bundle, { chrome = findChrome(), port = Numbe
   try { await getJson(`${endpoint}/json/version`); throw new Error(`Porta ${port} já usada por outro Chrome. Escolha CHROME_DEBUG_PORT.`); }
   catch (error) { if (error.message.includes('já usada')) throw error; }
   const profile = profileFor(chrome);
-  const args = [`--remote-debugging-address=127.0.0.1`, `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, '--no-first-run', 'about:blank'];
-  if (process.env.CHROME_HEADLESS === 'true') args.splice(-1, 0, '--headless=new');
+  const args = chromeArgs({ port, profile });
   const child = spawn(chrome, args, { stdio: 'ignore' });
   const stopOnSignal = () => child.kill();
   process.once('SIGINT', stopOnSignal);
